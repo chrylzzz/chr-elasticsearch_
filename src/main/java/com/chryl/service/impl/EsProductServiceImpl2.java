@@ -42,11 +42,10 @@ import java.util.Map;
 
 
 /**
- * 商品搜索管理Service实现类:注释理解版本
- * Created by Chr.yl on 2018/6/19.
+ * 商品搜索管理Service实现类:原版本
  */
 @Service
-public class EsProductServiceImpl implements EsProductService {
+public class EsProductServiceImpl2 implements EsProductService {
     private static final Logger LOGGER = LoggerFactory.getLogger(EsProductServiceImpl.class);
     @Autowired
     private EsProductDao productDao;
@@ -55,16 +54,9 @@ public class EsProductServiceImpl implements EsProductService {
     @Autowired
     private ElasticsearchTemplate elasticsearchTemplate;
 
-//    //使用@Query注解可以用Elasticsearch的DSL语句进行查询
-//    @Query("{"bool" : {"must" : {"field" : {"name" : " ? 0"}}}}")
-//    Page<EsProduct> findByName(String name, Pageable pageable);
-
-
     @Override
     public int importAll() {
-        //得到db所有的商品
         List<EsProduct> esProductList = productDao.getAllEsProductList(null);
-        //全部存入es
         Iterable<EsProduct> esProductIterable = productRepository.saveAll(esProductList);
         Iterator<EsProduct> iterator = esProductIterable.iterator();
         int result = 0;
@@ -77,18 +69,15 @@ public class EsProductServiceImpl implements EsProductService {
 
     @Override
     public void delete(Long id) {
-        //从es删除
         productRepository.deleteById(id);
     }
 
     @Override
     public EsProduct create(Long id) {
         EsProduct result = null;
-        //db得到商品
         List<EsProduct> esProductList = productDao.getAllEsProductList(id);
         if (esProductList.size() > 0) {
             EsProduct esProduct = esProductList.get(0);
-            //存入es
             result = productRepository.save(esProduct);
         }
         return result;
@@ -103,67 +92,39 @@ public class EsProductServiceImpl implements EsProductService {
                 esProduct.setId(id);
                 esProductList.add(esProduct);
             }
-            //从es中批量删除
             productRepository.deleteAll(esProductList);
         }
     }
 
     @Override
     public Page<EsProduct> search(String keyword, Integer pageNum, Integer pageSize) {
-        //先配置Page信息
         Pageable pageable = PageRequest.of(pageNum, pageSize);
-        //注意keyword 为所有查询的参数
         return productRepository.findByNameOrSubTitleOrKeywords(keyword, keyword, keyword, pageable);
     }
 
     @Override
     public Page<EsProduct> search(String keyword, Long brandId, Long productCategoryId, Integer pageNum, Integer pageSize, Integer sort) {
         Pageable pageable = PageRequest.of(pageNum, pageSize);
-        //1.构建查询 需要将匹配到的结果字符进行高亮显示
         NativeSearchQueryBuilder nativeSearchQueryBuilder = new NativeSearchQueryBuilder();
         //分页
         nativeSearchQueryBuilder.withPageable(pageable);
         //过滤
-        if (brandId != null || productCategoryId != null) {//如果查询的是id,那么就精确查询
-            //2.设置QueryBuilder
+        if (brandId != null || productCategoryId != null) {
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
             if (brandId != null) {
-                /*组合查询BoolQueryBuilder:builder下有must、should以及mustNot 相当于sql中的and、or以及not
-                 * must(QueryBuilders)   :AND
-                 * mustNot(QueryBuilders):NOT
-                 * should:               :OR
-                */
-                //termQuery 精确查询
                 boolQueryBuilder.must(QueryBuilders.termQuery("brandId", brandId));
             }
             if (productCategoryId != null) {
                 boolQueryBuilder.must(QueryBuilders.termQuery("productCategoryId", productCategoryId));
             }
-            //fuzzyQuery 设置模糊搜索,有学习两个字
-//            builder.must(QueryBuilders.fuzzyQuery("sumary", "学习"));
-            //设置要查询的内容中含有关键字
-//            builder.must(new QueryStringQueryBuilder("man").field("springdemo"));
             nativeSearchQueryBuilder.withFilter(boolQueryBuilder);
         }
-        //搜索:matchQuery 分词查询，--这里可以设置分词器,采用默认的分词器
+        //搜索
         if (StringUtils.isEmpty(keyword)) {
-            //相当于就没有设置查询条件
             nativeSearchQueryBuilder.withQuery(QueryBuilders.matchAllQuery());
         } else {
-            //不分词查询，参数1： 字段名，参数2：多个字段查询值,因为不分词，所以汉字只能查询一个字，英语是一个单词.
-            //QueryBuilder queryBuilder = QueryBuilders.termsQuery("fieldName", "fieldlValue1", "fieldlValue2...");
-            //分词查询，采用默认的分词器
-            //QueryBuilder queryBuilder = QueryBuilders.multiMatchQuery("fieldlValue", "fieldName1", "fieldName2", "fieldName3");
             List<FunctionScoreQueryBuilder.FilterFunctionBuilder> filterFunctionBuilders = new ArrayList<>();
-            //name , subTitle , keyword : 全部匹配分词查询,找到可以匹配的数据,因为输入的keyword不知道包含什么信息,所以全部匹配
-            filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(QueryBuilders.matchQuery("name", keyword),//matchQuery 分词查询
-                    /**
-                     * 它会在查询结束后对每一个匹配的文档进行一系列的重打分操作，最后以生成的最终分数进行排序,此处权重分配
-                     * weight
-                     weight 的用法最为简单，只需要设置一个数字作为权重，文档的分数就会乘以该权重。
-                     他最大的用途应该就是和过滤器一起使用了，因为过滤器只会筛选出符合标准的文档，而不会去详细的计算每个文档的具体得分，所以只要满足条件的文档的分数都是 1，而 weight 可以将其更换为你想要的数值。
-                     注意有多种计算分值的函数
-                     */
+            filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(QueryBuilders.matchQuery("name", keyword),
                     ScoreFunctionBuilders.weightFactorFunction(10)));
             filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(QueryBuilders.matchQuery("subTitle", keyword),
                     ScoreFunctionBuilders.weightFactorFunction(5)));
@@ -171,31 +132,31 @@ public class EsProductServiceImpl implements EsProductService {
                     ScoreFunctionBuilders.weightFactorFunction(2)));
             FunctionScoreQueryBuilder.FilterFunctionBuilder[] builders = new FunctionScoreQueryBuilder.FilterFunctionBuilder[filterFunctionBuilders.size()];
             filterFunctionBuilders.toArray(builders);
-            //build query
             FunctionScoreQueryBuilder functionScoreQueryBuilder = QueryBuilders.functionScoreQuery(builders)
                     .scoreMode(FunctionScoreQuery.ScoreMode.SUM)
                     .setMinScore(2);
-            //写入query
             nativeSearchQueryBuilder.withQuery(functionScoreQueryBuilder);
         }
-        //排序:将排序设置到构建中
-        if (sort == 1) {//按新品从新到旧
+        //排序
+        if (sort == 1) {
+            //按新品从新到旧
             nativeSearchQueryBuilder.withSort(SortBuilders.fieldSort("id").order(SortOrder.DESC));
-        } else if (sort == 2) {//按销量从高到低
+        } else if (sort == 2) {
+            //按销量从高到低
             nativeSearchQueryBuilder.withSort(SortBuilders.fieldSort("sale").order(SortOrder.DESC));
-        } else if (sort == 3) {//按价格从低到高
+        } else if (sort == 3) {
+            //按价格从低到高
             nativeSearchQueryBuilder.withSort(SortBuilders.fieldSort("price").order(SortOrder.ASC));
-        } else if (sort == 4) {//按价格从高到低
+        } else if (sort == 4) {
+            //按价格从高到低
             nativeSearchQueryBuilder.withSort(SortBuilders.fieldSort("price").order(SortOrder.DESC));
-        } else {//按相关度
+        } else {
+            //按相关度
             nativeSearchQueryBuilder.withSort(SortBuilders.scoreSort().order(SortOrder.DESC));
         }
-        //自定义排序规则
         nativeSearchQueryBuilder.withSort(SortBuilders.scoreSort().order(SortOrder.DESC));
-        //将build query放入search query
         NativeSearchQuery searchQuery = nativeSearchQueryBuilder.build();
         LOGGER.info("DSL:{}", searchQuery.getQuery().toString());
-        //执行查询
         return productRepository.search(searchQuery);
     }
 
@@ -208,7 +169,7 @@ public class EsProductServiceImpl implements EsProductService {
             String keyword = esProduct.getName();
             Long brandId = esProduct.getBrandId();
             Long productCategoryId = esProduct.getProductCategoryId();
-            //根据商品标题、品牌、分类进行搜索,matchQuery分词查询
+            //根据商品标题、品牌、分类进行搜索
             List<FunctionScoreQueryBuilder.FilterFunctionBuilder> filterFunctionBuilders = new ArrayList<>();
             filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(QueryBuilders.matchQuery("name", keyword),
                     ScoreFunctionBuilders.weightFactorFunction(8)));
@@ -240,16 +201,10 @@ public class EsProductServiceImpl implements EsProductService {
         NativeSearchQueryBuilder builder = new NativeSearchQueryBuilder();
         //搜索条件
         if (StringUtils.isEmpty(keyword)) {
-            //空,匹配所有文件，相当于就没有设置查询条件
             builder.withQuery(QueryBuilders.matchAllQuery());
         } else {
-            //分词查询，采用默认的分词器
             builder.withQuery(QueryBuilders.multiMatchQuery(keyword, "name", "subTitle", "keywords"));
         }
-        /**
-         * 聚合查询:
-         * https://www.cnblogs.com/hirampeng/p/10035858.html
-         */
         //聚合搜索品牌名称
         builder.addAggregation(AggregationBuilders.terms("brandNames").field("brandName"));
         //集合搜索分类名称

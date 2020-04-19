@@ -1,0 +1,78 @@
+Spring Data Elasticsearch
+Spring Data Elasticsearch是Spring提供的一种以Spring Data风格来操作数据存储的方式，它可以避免编写大量的样板代码。
+
+常用注解:
+
+
+
+
+
+@Document
+//标示映射到Elasticsearch文档上的领域对象
+public @interface Document {
+  //索引库名次，mysql中数据库的概念
+    String indexName();
+  //文档类型，mysql中表的概念
+    String type() default "";
+  //默认分片数
+    short shards() default 5;
+  //默认副本数量
+    short replicas() default 1;
+
+}
+
+
+
+
+@Id
+//表示是文档的id，文档可以认为是mysql中表行的概念
+public @interface Id {
+}
+
+
+
+
+不需要中文分词的字段设置成@Field(type = FieldType.Keyword)类型，需要中文分词的设置成@Field(analyzer = "ik_max_word",type = FieldType.Text)类型。
+@Field
+public @interface Field {
+  //文档中字段的类型
+    FieldType type() default FieldType.Auto;
+  //是否建立倒排索引
+    boolean index() default true;
+  //是否进行存储
+    boolean store() default false;
+  //分词器名次
+    String analyzer() default "";
+}
+
+//为文档自动指定元数据类型
+public enum FieldType {
+    Text,//会进行分词并建了索引的字符类型
+    Integer,
+    Long,
+    Date,
+    Float,
+    Double,
+    Boolean,
+    Object,
+    Auto,//自动判断字段类型
+    Nested,//嵌套对象类型
+    Ip,
+    Attachment,
+    Keyword//不会进行分词建立索引的类型
+}
+
+Sping Data方式的数据操作
+继承ElasticsearchRepository接口可以获得常用的数据操作方法
+继承ElasticsearchRepository接口，这样就拥有了一些基本的Elasticsearch数据操作方法，同时定义了一个衍生查询方法。
+
+
+
+修改application.yml文件，在spring节点下添加Elasticsearch相关配置。
+
+data:
+  elasticsearch:
+    repositories:
+      enabled: true
+    cluster-nodes: 127.0.0.1:9300 # es的连接地址及端口号
+    cluster-name: elasticsearch # es集群的名称

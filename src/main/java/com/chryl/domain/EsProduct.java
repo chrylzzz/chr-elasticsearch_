@@ -11,14 +11,30 @@ import java.util.List;
 
 /**
  * 搜索中的商品信息
- * 不需要中文分词的字段设置成@Field(type = FieldType.Keyword)类型，需要中文分词的设置成@Field(analyzer = "ik_max_word",type = FieldType.Text)类型。
+ * 不需要中文分词的字段设置成@Field(type = FieldType.Keyword)类型，
+ * 需要中文分词的设置成@Field(analyzer = "ik_max_word",type = FieldType.Text)类型。
+ * <p>
+ * //为文档自动指定元数据类型
+ * Text,    //会进行分词并建了索引的字符类型
+ * Integer,
+ * Long,
+ * Date,
+ * Float,
+ * Double,
+ * Boolean,
+ * Object,
+ * Auto,    //自动判断字段类型
+ * Nested,  //嵌套对象类型
+ * Ip,
+ * Attachment,
+ * Keyword  //不会进行分词建立索引的类型
  */
 @Document(indexName = "pms", type = "product", shards = 1, replicas = 0)
 public class EsProduct implements Serializable {
     private static final long serialVersionUID = -1L;
-    @Id
+    @Id//id 字段
     private Long id;
-    @Field(type = FieldType.Keyword)
+    @Field(type = FieldType.Keyword)//不中文分词
     private String productSn;
     private Long brandId;
     @Field(type = FieldType.Keyword)
@@ -27,7 +43,7 @@ public class EsProduct implements Serializable {
     @Field(type = FieldType.Keyword)
     private String productCategoryName;
     private String pic;
-    @Field(analyzer = "ik_max_word", type = FieldType.Text)
+    @Field(analyzer = "ik_max_word", type = FieldType.Text)//中文分词
     private String name;
     @Field(analyzer = "ik_max_word", type = FieldType.Text)
     private String subTitle;
@@ -40,7 +56,7 @@ public class EsProduct implements Serializable {
     private Integer stock;
     private Integer promotionType;
     private Integer sort;
-    @Field(type = FieldType.Nested)
+    @Field(type = FieldType.Nested)//嵌套的对象
     private List<EsProductAttributeValue> attrValueList;
 
     public Long getId() {

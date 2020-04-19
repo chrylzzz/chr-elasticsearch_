@@ -4,12 +4,14 @@ package com.chryl.service;
 import com.chryl.domain.EsProduct;
 import com.chryl.domain.EsProductRelatedInfo;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.annotations.Query;
 
 import java.util.List;
 
 /**
  * 商品搜索管理Service
- * Created by macro on 2018/6/19.
+ * Created by Chr.yl on 2018/6/19.
  */
 public interface EsProductService {
     /**
@@ -23,7 +25,7 @@ public interface EsProductService {
     void delete(Long id);
 
     /**
-     * 根据id创建商品
+     * 根据id创建商品,db查询入es
      */
     EsProduct create(Long id);
 
@@ -51,4 +53,6 @@ public interface EsProductService {
      * 获取搜索词相关品牌、分类、属性
      */
     EsProductRelatedInfo searchRelatedInfo(String keyword);
+
+
 }

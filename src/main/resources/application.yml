@@ -30,5 +30,7 @@ spring:
     elasticsearch:
       repositories:
         enabled: true
-      cluster-nodes: 127.0.0.1:9200
+      #org.elasticsearch.client.transport.NoNodeAvailableException: None of the configured nodes are available: [{#transport#-1}{Y3El8MDDRJqopm4ZBzqnqg}{192.168.228.128}{192.168.228.128:9200}]
+      #es与java交互的默认端口号是9300，与http交互的端口号是9200，两者不要搞错了
+      cluster-nodes: 192.168.228.128:9300
 #      cluster-name: elasticsearch # es集群的名称

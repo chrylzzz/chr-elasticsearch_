@@ -42,7 +42,7 @@ import java.util.Map;
 
 
 /**
- * 商品搜索管理Service实现类:注释理解版本
+ * 商品搜索管理Service实现类: 注释理解版本
  * Created by Chr.yl on 2018/6/19.
  */
 @Service

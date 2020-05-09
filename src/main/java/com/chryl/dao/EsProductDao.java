@@ -13,5 +13,4 @@ public interface EsProductDao {
 
     List<EsProduct> getAllEsProductList(@Param("id") Long id);
 
-
 }

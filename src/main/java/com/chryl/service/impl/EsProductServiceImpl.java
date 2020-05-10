@@ -115,7 +115,12 @@ public class EsProductServiceImpl implements EsProductService {
         //注意keyword 为所有查询的参数
         return productRepository.findByNameOrSubTitleOrKeywords(keyword, keyword, keyword, pageable);
     }
-
+//    matchQuery：词条匹配，先分词然后在调用termQuery进行匹配
+//    TermQuery：词条匹配，不分词
+//    wildcardQuery：通配符匹配
+//    fuzzyQuery：模糊匹配
+//    rangeQuery：范围匹配
+//    booleanQuery：布尔查询
     @Override
     public Page<EsProduct> search(String keyword, Long brandId, Long productCategoryId, Integer pageNum, Integer pageSize, Integer sort) {
         Pageable pageable = PageRequest.of(pageNum, pageSize);

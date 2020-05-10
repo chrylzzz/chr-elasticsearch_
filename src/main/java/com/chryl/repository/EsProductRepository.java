@@ -26,5 +26,4 @@ public interface EsProductRepository extends ElasticsearchRepository<EsProduct, 
 
 //    Page<EsProduct> findByName
 
-
 }

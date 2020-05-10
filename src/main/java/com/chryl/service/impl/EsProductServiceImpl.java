@@ -115,31 +115,42 @@ public class EsProductServiceImpl implements EsProductService {
         //注意keyword 为所有查询的参数
         return productRepository.findByNameOrSubTitleOrKeywords(keyword, keyword, keyword, pageable);
     }
-//    matchQuery：词条匹配，先分词然后在调用termQuery进行匹配
-//    TermQuery：词条匹配，不分词
-//    wildcardQuery：通配符匹配
-//    fuzzyQuery：模糊匹配
-//    rangeQuery：范围匹配
-//    booleanQuery：布尔查询
+
     @Override
     public Page<EsProduct> search(String keyword, Long brandId, Long productCategoryId, Integer pageNum, Integer pageSize, Integer sort) {
         Pageable pageable = PageRequest.of(pageNum, pageSize);
-        //1.构建查询 需要将匹配到的结果字符进行高亮显示
+        //1.NativeSearchQueryBuilder构建查询 需要将匹配到的结果字符进行高亮显示
         NativeSearchQueryBuilder nativeSearchQueryBuilder = new NativeSearchQueryBuilder();
         //分页
         nativeSearchQueryBuilder.withPageable(pageable);
         //过滤
         if (brandId != null || productCategoryId != null) {//如果查询的是id,那么就精确查询
-            //2.设置QueryBuilder
+//    matchAllQuery()方法用来匹配全部文档,没有查询条件：QueryBuilder queryBuilder = QueryBuilders.matchAllQuery();//搜索全部文档
+//    matchQuery(String name,Object  text)：词条匹配，先分词然后在调用termQuery进行匹配，匹配单个字段，匹配字段名为filedname,值为value的文档：//单个匹配，搜索name为jack的文档：QueryBuilder queryBuilder = QueryBuilders.matchQuery("name", "jack");
+//    multiMatchQuery(Object text, String... fieldNames)多个字段匹配某一个值：QueryBuilder queryBuilder = QueryBuilders.multiMatchQuery("music","name", "interest");//搜索name中或interest中包含有music的文档（必须与music一致）
+//    TermQuery：词条匹配，不分词
+//    wildcardQuery：通配符匹配，模糊查询：WildcardQueryBuilder queryBuilder = QueryBuilders.wildcardQuery("name", "*jack*");//搜索名字中含有jack文档（name中只要包含jack即可）
+//    fuzzyQuery：模糊匹配
+//    rangeQuery：范围匹配
+//    booleanQuery：布尔查询，进行复合查询，可以使用must(相当于and)，should(相当于or)
+            //2.设置QueryBuilder,为简单条件查询，该处使用布尔查询
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
             if (brandId != null) {
                 /*组合查询BoolQueryBuilder:builder下有must、should以及mustNot 相当于sql中的and、or以及not
                  * must(QueryBuilders)   :AND
                  * mustNot(QueryBuilders):NOT
-                 * should:               :OR
-                */
+                 * should(QueryBuilders):OR
+                 */
                 //termQuery 精确查询
-                boolQueryBuilder.must(QueryBuilders.termQuery("brandId", brandId));
+                boolQueryBuilder.must(QueryBuilders.termQuery("brandId", brandId));//相当于and,可以直接QueryBuilders进行构建查询或者使用如下方式：
+                /* 第二种方式使用must
+                //模糊查询
+                WildcardQueryBuilder queryBuilder1 = QueryBuilders.wildcardQuery("name", "*jack*");//搜索名字中含有jack的文档
+                WildcardQueryBuilder queryBuilder2 = QueryBuilders.wildcardQuery("interest", "*read*");//搜索interest中含有read的文档
+                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                //name中必须含有jack,interest中必须含有read,相当于and
+                boolQueryBuilder.must(queryBuilder1);
+                boolQueryBuilder.must(queryBuilder2);*/
             }
             if (productCategoryId != null) {
                 boolQueryBuilder.must(QueryBuilders.termQuery("productCategoryId", productCategoryId));

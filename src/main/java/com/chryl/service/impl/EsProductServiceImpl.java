@@ -234,7 +234,7 @@ public class EsProductServiceImpl implements EsProductService {
             builder.withQuery(functionScoreQueryBuilder);
             builder.withPageable(pageable);
             NativeSearchQuery searchQuery = builder.build();
-            LOGGER.info("DSL:{}", searchQuery.getQuery().toString());
+            LOGGER.info("DSL:{}", searchQuery.getQuery().toString());//dsl 语句
             return productRepository.search(searchQuery);
         }
         return new PageImpl<>(null);

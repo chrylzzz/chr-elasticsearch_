@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
 
-/**
+/**--------------------------注意这里没用日期类型
  * 搜索中的商品信息
  * 不需要中文分词的字段设置成@Field(type = FieldType.Keyword)类型，
  * 需要中文分词的设置成@Field(analyzer = "ik_max_word",type = FieldType.Text)类型。

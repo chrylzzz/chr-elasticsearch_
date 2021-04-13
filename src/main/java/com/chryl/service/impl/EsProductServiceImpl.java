@@ -133,7 +133,7 @@ public class EsProductServiceImpl implements EsProductService {
 //    fuzzyQuery：模糊匹配
 //    rangeQuery：范围匹配
 //    booleanQuery：布尔查询，进行复合查询，可以使用must(相当于and)，should(相当于or)
-            //2.设置QueryBuilder,为简单条件查询，该处使用布尔查询
+            //2.设置QueryBuilder,为简单条件查询，该处使用布尔查询,多条件查询
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
             if (brandId != null) {
                 /*组合查询BoolQueryBuilder:builder下有must、should以及mustNot 相当于sql中的and、or以及not
@@ -141,10 +141,10 @@ public class EsProductServiceImpl implements EsProductService {
                  * mustNot(QueryBuilders):NOT
                  * should(QueryBuilders):OR
                  */
-                //termQuery 精确查询
+                //1.termQuery 精确查询
                 boolQueryBuilder.must(QueryBuilders.termQuery("brandId", brandId));//相当于and,可以直接QueryBuilders进行构建查询或者使用如下方式：
                 /* 第二种方式使用must
-                //模糊查询
+                //2.wildcardQuery 模糊查询
                 WildcardQueryBuilder queryBuilder1 = QueryBuilders.wildcardQuery("name", "*jack*");//搜索名字中含有jack的文档
                 WildcardQueryBuilder queryBuilder2 = QueryBuilders.wildcardQuery("interest", "*read*");//搜索interest中含有read的文档
                 BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
@@ -251,6 +251,15 @@ public class EsProductServiceImpl implements EsProductService {
         return new PageImpl<>(null);
     }
 
+
+    /**
+     * 聚合搜索:
+     * 首先来说下我们的需求，可以根据搜索关键字获取到与关键字匹配商品相关的分类、品牌以及属性，下面这张图有助于理解；
+     * 在SpringBoot中实现，聚合操作比较复杂，已经超出了Elasticsearch Repositories的使用范围，需要直接使用ElasticsearchTemplate来实现；
+     *
+     * @param keyword
+     * @return
+     */
     @Override
     public EsProductRelatedInfo searchRelatedInfo(String keyword) {
         NativeSearchQueryBuilder builder = new NativeSearchQueryBuilder();

@@ -1,6 +1,12 @@
 1.
 未安装ik分词器:
-启动报错:
+启动报错:是未安装分词器??
 failed to load elasticsearch nodes : org.elasticsearch.index.mapper.MapperParsingException: analyzer [ik_max_word] not found for field [name]
 
-2.
+2.安装ik分词后启动报错:object mapping [chrEmpList] can't be changed from non-nested to nested
+Caused by: java.lang.IllegalArgumentException: object mapping [chrEmpList] can't be changed from non-nested to nested
+解决:使用elasticsearch-head删除所有索引,重新导入数据,即可.
+
+3.安装 elasticsearch-head:如果跨域则,设置config下的elasticsearch.yml配置
+http.cors.enabled: true
+http.cors.allow-origin: "*"

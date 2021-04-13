@@ -1,0 +1,6 @@
+1.
+未安装ik分词器:
+启动报错:
+failed to load elasticsearch nodes : org.elasticsearch.index.mapper.MapperParsingException: analyzer [ik_max_word] not found for field [name]
+
+2.

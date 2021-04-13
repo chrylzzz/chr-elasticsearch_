@@ -10,7 +10,8 @@
         <relativePath/>
         <!--
         springboot 2.2.x 的data es 为7.x , 与6.x完全不同
-        暂时使用springboot 2.1.x 的data es 为6.x
+        暂时使用springboot 2.1.x 的data es 为6.x ,
+        ,与chr_es_demo 版本一致
          -->
     </parent>
     <groupId>com.chryl</groupId>

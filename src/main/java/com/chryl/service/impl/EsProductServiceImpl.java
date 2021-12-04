@@ -11,6 +11,8 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AbstractAggregationBuilder;
 import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
@@ -19,6 +21,8 @@ import org.elasticsearch.search.aggregations.bucket.nested.InternalNested;
 import org.elasticsearch.search.aggregations.bucket.terms.LongTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
+import org.elasticsearch.search.fetch.subphase.highlight.HighlightField;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
@@ -29,12 +33,16 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
+import org.springframework.data.elasticsearch.core.SearchResultMapper;
+import org.springframework.data.elasticsearch.core.aggregation.AggregatedPage;
+import org.springframework.data.elasticsearch.core.aggregation.impl.AggregatedPageImpl;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.awt.print.Book;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -208,9 +216,65 @@ public class EsProductServiceImpl implements EsProductService {
         }
         //自定义排序规则
         nativeSearchQueryBuilder.withSort(SortBuilders.scoreSort().order(SortOrder.DESC));
+        //自定义高亮
+        HighlightBuilder.Field filed = new HighlightBuilder.Field("*");//设置需要高亮的属性，也可使用通配符*
+        filed.preTags("<span style='color:red;'>");//样式前缀
+        filed.postTags("</span");//样式后缀
+        nativeSearchQueryBuilder.withHighlightFields(filed);//设置高亮，可变参数，可传入多个高亮的属性
+//        nativeSearchQueryBuilder.withHighlightFields(
+//                new HighlightBuilder.Field("name").preTags("<font color='red'>").postTags("</font>"),
+//                new HighlightBuilder.Field("subTitle").preTags("<font color='red'>").postTags("</font>"),
+//                new HighlightBuilder.Field("keywords").preTags("<em>").postTags("</em>")
+//        );
         //将build query放入search query
         NativeSearchQuery searchQuery = nativeSearchQueryBuilder.build();
         LOGGER.info("DSL:{}", searchQuery.getQuery().toString());
+        //高亮未成功
+        AggregatedPage<EsProduct> esProducts = elasticsearchTemplate.queryForPage(searchQuery, EsProduct.class, new SearchResultMapper() {////对查询进行自定义封装
+            @Override
+            public <T> AggregatedPage<T> mapResults(SearchResponse searchResponse, Class<T> aClass, Pageable pageable) {
+                List<EsProduct> esProductList = new ArrayList<>();
+                //根据相应结果货期His
+                SearchHits hits = searchResponse.getHits();
+                //索取his数组
+                SearchHit[] searchHits = hits.getHits();
+                //遍历结果数据
+                for (SearchHit searchHit : searchHits) {
+
+                    EsProduct esProductsMapper = new EsProduct();
+                    //获取原始数据
+                    Map<String, Object> sourceAsMap = searchHit.getSourceAsMap();
+                    //获取高亮处理后的数据
+                    Map<String, HighlightField> highlightFields = searchHit.getHighlightFields();
+
+//                    esProductsMapper.setId(searchHit.getId());
+                    esProductsMapper.setSubTitle(sourceAsMap.get("subTitle").toString());
+                    if (highlightFields.containsKey("subTitle")) {//是否有高亮处理，有就将原始数据覆盖掉
+                        esProductsMapper.setSubTitle(highlightFields.get("subTitle").getFragments()[0].toString());
+                    }
+                    esProductsMapper.setKeywords(sourceAsMap.get("keywords").toString());
+                    if (highlightFields.containsKey("keywords")) {//是否有高亮处理，有就将原始数据覆盖掉
+                        esProductsMapper.setKeywords(highlightFields.get("keywords").getFragments()[0].toString());
+                    }
+                    esProductsMapper.setName(sourceAsMap.get("name").toString());
+                    if (highlightFields.containsKey("name")) {//是否有高亮处理，有就将原始数据覆盖掉
+                        esProductsMapper.setName(highlightFields.get("name").getFragments()[0].toString());
+                    }
+                    //数字
+//                    book.setPrice(Double.parseDouble(sourceAsMap.get("price").toString()));
+//                    if (highlightFields.containsKey("price")) {//是否有高亮处理，有就将原始数据覆盖掉
+//                        book.setPrice(Double.parseDouble(highlightFields.get("price").getFragments()[0].toString()));
+//                    }
+                    //日期
+//                    book.setPubdata(new Date(Long.parseLong(sourceAsMap.get("pubdata").toString())));
+//                    if (highlightFields.containsKey("pubdata")) {//是否有高亮处理，有就将原始数据覆盖掉
+//                        book.setPubdata(new Date(Long.parseLong(highlightFields.get("pubdata").getFragments()[0].toString())));
+//                    }
+                    esProductList.add(esProductsMapper);
+                }
+                return new AggregatedPageImpl<>((List<T>) esProductList);
+            }
+        });
         //执行查询
         return productRepository.search(searchQuery);
     }
